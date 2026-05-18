@@ -45,6 +45,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
+// Health Check and Status Routes for Deployment Verification
+app.get('/', (req, res) => {
+  res.status(200).send('<h3>Backend Complaint Management System Server is running successfully!</h3>');
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Backend server is online and running perfectly.',
+    timestamp: new Date(),
+    uptime: `${Math.round(process.uptime())} seconds`
+  });
+});
 
 // Escalation Monitor (Runs every hour)
 const Complaint = require('./models/Complaint');

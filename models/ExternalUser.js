@@ -34,7 +34,7 @@ const externalUserSchema = new mongoose.Schema({
 // Since external users might be logged in, we need comparePassword
 const bcrypt = require('bcryptjs');
 
-externalUserSchema.methods.comparePassword = async function(candidatePassword) {
+externalUserSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 

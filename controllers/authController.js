@@ -26,19 +26,19 @@ const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     const User = getUserModel();
-    
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
-    
+
     const user = await User.create({
       name,
       email,
       password,
       role: role || 'student'
     });
-    
+
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -67,7 +67,7 @@ const login = async (req, res) => {
     if (useExternal && externalDB.readyState !== 1) {
       return res.status(503).json({ message: 'External authentication service is currently unavailable. Please try again later.' });
     }
-    
+
     // Find user with a catch-all for database connectivity issues
     let user;
     try {
@@ -87,13 +87,13 @@ const login = async (req, res) => {
     if (useExternal && user.program && user.program !== 'cybersecurity') {
       return res.status(403).json({ message: 'Access denied. Only cybersecurity program users are allowed.' });
     }
-    
+
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials. Only cybersecurity program users are allowed.' });
     }
-    
+
     res.json({
       _id: user._id,
       name: user.name,

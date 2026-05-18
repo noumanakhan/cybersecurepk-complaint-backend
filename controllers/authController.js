@@ -94,6 +94,25 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials. Only cybersecurity program users are allowed.' });
     }
 
+    // Sync external user to the local database if using external auth
+    if (useExternal) {
+      try {
+        await LocalUser.findOneAndUpdate(
+          { _id: user._id },
+          {
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            password: 'EXTERNAL_AUTH_MANAGED' // Dummy password to satisfy local schema
+          },
+          { upsert: true, new: true }
+        );
+        console.log(`[AUTH-SYNC] Synced external user ${user.email} (${user._id}) to the local database.`);
+      } catch (syncError) {
+        console.error('[AUTH-SYNC] Failed to sync external user to the local database:', syncError.message);
+      }
+    }
+
     res.json({
       _id: user._id,
       name: user.name,

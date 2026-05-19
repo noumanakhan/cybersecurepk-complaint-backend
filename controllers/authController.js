@@ -1,13 +1,5 @@
-const LocalUser = require('../models/User');
-const ExternalUser = require('../models/ExternalUser');
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const { externalDB } = require('../config/db');
-
-// Helper to determine which model to use
-const getUserModel = () => {
-  const useExternal = process.env.USE_EXTERNAL_AUTH === 'true';
-  return useExternal ? ExternalUser : LocalUser;
-};
 
 // Generate JWT token including role
 const generateToken = (id, role) => {
@@ -19,13 +11,8 @@ const generateToken = (id, role) => {
 // @desc    Register user
 // @route   POST /api/auth/register
 const register = async (req, res) => {
-  if (process.env.USE_EXTERNAL_AUTH === 'true') {
-    return res.status(403).json({ message: 'Registration is disabled when using external authentication.' });
-  }
-
   try {
-    const { name, email, password, role } = req.body;
-    const User = getUserModel();
+    const { name, email, password, role, program } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -36,7 +23,8 @@ const register = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'student'
+      role: role || 'student',
+      program: program || 'cybersecurity'
     });
 
     res.status(201).json({
@@ -56,35 +44,14 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const useExternal = process.env.USE_EXTERNAL_AUTH === 'true';
-    const User = getUserModel();
 
-    if (!User) {
-      return res.status(500).json({ message: 'Authentication system is not configured.' });
-    }
-
-    // If external, check connection state to avoid 10s timeout hang
-    if (useExternal && externalDB.readyState !== 1) {
-      return res.status(503).json({ message: 'External authentication service is currently unavailable. Please try again later.' });
-    }
-
-    // Find user with a catch-all for database connectivity issues
-    let user;
-    try {
-      user = await User.findOne({ email });
-    } catch (dbError) {
-      if (dbError.message.includes('buffering timed out')) {
-        return res.status(503).json({ message: 'External database connection timed out. Only cybersecurity users can access this system.' });
-      }
-      throw dbError;
-    }
-
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials. Only cybersecurity program users are allowed.' });
     }
 
-    // Security Check: If external, verify program if field exists
-    if (useExternal && user.program && user.program !== 'cybersecurity') {
+    // Security Check: Verify program if field exists
+    if (user.program && user.program !== 'cybersecurity') {
       return res.status(403).json({ message: 'Access denied. Only cybersecurity program users are allowed.' });
     }
 
@@ -92,25 +59,6 @@ const login = async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials. Only cybersecurity program users are allowed.' });
-    }
-
-    // Sync external user to the local database if using external auth
-    if (useExternal) {
-      try {
-        await LocalUser.findOneAndUpdate(
-          { _id: user._id },
-          {
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            password: 'EXTERNAL_AUTH_MANAGED' // Dummy password to satisfy local schema
-          },
-          { upsert: true, new: true }
-        );
-        console.log(`[AUTH-SYNC] Synced external user ${user.email} (${user._id}) to the local database.`);
-      } catch (syncError) {
-        console.error('[AUTH-SYNC] Failed to sync external user to the local database:', syncError.message);
-      }
     }
 
     res.json({

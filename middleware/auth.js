@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-const LocalUser = require('../models/User');
-const ExternalUser = require('../models/ExternalUser');
+const User = require('../models/User');
 
 const auth = async (req, res, next) => {
   try {
@@ -11,15 +10,6 @@ const auth = async (req, res, next) => {
     }
     
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Dynamically choose model to verify user existence
-    const useExternal = process.env.USE_EXTERNAL_AUTH === 'true';
-    const User = useExternal ? ExternalUser : LocalUser;
-
-    if (!User) {
-      return res.status(500).json({ message: 'Auth system misconfigured.' });
-    }
-
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {

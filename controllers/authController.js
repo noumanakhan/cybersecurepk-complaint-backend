@@ -1,9 +1,10 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Generate JWT token including role
+// Generate JWT token including role with fallback secret
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+  const secret = process.env.JWT_SECRET || 'cybersecurepk_super_secret_jwt_key_2025';
+  return jwt.sign({ id, role }, secret, {
     expiresIn: '7d'
   });
 };
@@ -35,7 +36,8 @@ const register = async (req, res) => {
       token: generateToken(user._id, user.role)
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Registration error:', error);
+    res.status(500).json({ message: error.message || 'Registration failed' });
   }
 };
 
@@ -44,6 +46,10 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide both email and password' });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -70,7 +76,7 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'An internal server error occurred.' });
+    res.status(500).json({ message: error.message || 'An internal server error occurred.' });
   }
 };
 

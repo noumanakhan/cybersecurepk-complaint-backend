@@ -3,8 +3,10 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+
 // Connect to the unified MongoDB cluster (external DB)
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(mongoUri)
   .then(() => console.log('MongoDB connected to external cluster successfully'))
   .catch(err => console.log('MongoDB connection error:', err.message));
 

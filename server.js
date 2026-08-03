@@ -10,12 +10,29 @@ dotenv.config();
 // Initialize DB connections
 require('./config/db');
 
+// Build allowed origins list from env so Render + Vercel deployments
+// only need an env var update — no code changes required.
+const allowedOrigins = [
+  'http://localhost:3000',   // local dev
+  'http://localhost:5173',   // local dev (Vite)
+  'https://complaint.cybersecurepakistan.pk', // production custom domain
+];
+
+// Dynamically add the Vercel frontend URL from the environment
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 const corsOptions = {
-  origin: [
-    'https://complaint.cybersecurepakistan.pk',
-    'http://localhost:3000', // For local development
-    'http://localhost:5173'  // For local development (Vite default)
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (e.g. curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 };
